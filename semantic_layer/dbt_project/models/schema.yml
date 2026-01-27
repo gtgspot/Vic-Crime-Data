@@ -1,0 +1,499 @@
+# Victorian Crime Data - Model Schema Documentation
+# This file serves as the metadata catalog for all data models
+
+version: 2
+
+# ============================================================================
+# SOURCE DEFINITIONS
+# ============================================================================
+sources:
+  - name: raw_crime_data
+    description: "Raw crime statistics data from Victoria Police Crime Statistics Agency"
+    database: vic_crime_db
+    schema: raw
+    tables:
+      - name: criminal_incidents
+        description: >
+          Criminal incidents recorded by Victoria Police. A criminal incident is a
+          unique event that may involve one or more offences committed at a particular
+          time and place.
+        meta:
+          owner: "Crime Statistics Agency"
+          update_frequency: "Annual (September year-end)"
+          time_range: "2012-2021"
+          row_count_approx: 50000
+        columns:
+          - name: year
+            description: "Fiscal year ending September"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021]
+          - name: local_government_area
+            description: "The LGA where the incident occurred"
+            tests:
+              - not_null
+          - name: incidents_recorded
+            description: "Count of unique criminal incidents"
+            tests:
+              - not_null
+
+      - name: recorded_offences
+        description: >
+          Individual offences recorded by Victoria Police. One criminal incident
+          may contain multiple recorded offences.
+        meta:
+          owner: "Crime Statistics Agency"
+          update_frequency: "Annual (September year-end)"
+          time_range: "2012-2021"
+        columns:
+          - name: year
+            description: "Fiscal year ending September"
+          - name: local_government_area
+            description: "The LGA where the offence was recorded"
+          - name: offence_count
+            description: "Count of individual offences"
+
+      - name: alleged_offenders
+        description: >
+          Alleged offender incidents - instances where a person was processed by
+          police in connection with a criminal incident.
+        meta:
+          owner: "Crime Statistics Agency"
+          update_frequency: "Annual (September year-end)"
+          time_range: "2012-2021"
+
+      - name: family_incidents
+        description: >
+          Family violence incidents recorded by Victoria Police. Limited to 2017-2021.
+        meta:
+          owner: "Crime Statistics Agency"
+          update_frequency: "Annual (September year-end)"
+          time_range: "2017-2021"
+          note: "Only 5 years of data available"
+
+      - name: victim_reports
+        description: >
+          Victim reports - instances where a person was recorded as a victim of crime.
+        meta:
+          owner: "Crime Statistics Agency"
+          update_frequency: "Annual (September year-end)"
+          time_range: "2012-2021"
+
+  - name: reference_data
+    description: "Reference and geographic data for Victoria"
+    schema: reference
+    tables:
+      - name: police_stations
+        description: "Police station locations in Victoria"
+        meta:
+          source: "data.vic.gov.au"
+
+      - name: lga_boundaries
+        description: "Geographic boundaries for Local Government Areas"
+        meta:
+          source: "data.gov.au"
+
+# ============================================================================
+# STAGING MODELS
+# ============================================================================
+models:
+  # --------------------------------------------------------------------------
+  # Staging Layer - Clean and standardize raw data
+  # --------------------------------------------------------------------------
+  - name: stg_criminal_incidents
+    description: >
+      Staged criminal incidents data with standardized column names and
+      filtered to exclude aggregate rows.
+    meta:
+      layer: staging
+      grain: "One row per LGA per Year per Offence Type"
+    columns:
+      - name: incident_id
+        description: "Surrogate key for the incident record"
+        tests:
+          - unique
+          - not_null
+      - name: year
+        description: "Fiscal year (ending September)"
+        meta:
+          business_definition: "The 12-month reporting period ending in September"
+      - name: local_government_area
+        description: "Local Government Area name"
+        meta:
+          business_definition: "One of 79 geographic administrative divisions in Victoria"
+      - name: police_region
+        description: "Victoria Police administrative region"
+        meta:
+          business_definition: "One of four operational regions: North West Metro, Eastern, Southern Metro, Western"
+      - name: incidents_recorded
+        description: "Count of criminal incidents"
+        meta:
+          business_definition: "Unique criminal events reported to police"
+          aggregation: "SUM"
+      - name: rate_per_100k
+        description: "Incidents per 100,000 population"
+        meta:
+          business_definition: "Standardized rate enabling comparison across different-sized areas"
+          calculation: "(incidents_recorded / population) * 100000"
+
+  - name: stg_recorded_offences
+    description: >
+      Staged recorded offences data with standardized naming conventions.
+    meta:
+      layer: staging
+      grain: "One row per LGA per Year per Offence Type"
+    columns:
+      - name: offence_id
+        description: "Surrogate key for the offence record"
+      - name: year
+        description: "Fiscal year (ending September)"
+      - name: local_government_area
+        description: "Local Government Area name"
+      - name: offence_division
+        description: "Highest-level crime category (A-F)"
+        meta:
+          business_definition: "Primary classification: A=Person, B=Property, C=Drug, D=Public Order, E=Justice, F=Other"
+      - name: offence_subdivision
+        description: "Mid-level crime category"
+      - name: offence_subgroup
+        description: "Most granular crime classification"
+      - name: offence_count
+        description: "Number of individual offences"
+        meta:
+          business_definition: "Individual criminal acts within incidents"
+          aggregation: "SUM"
+      - name: is_family_violence
+        description: "Boolean flag indicating if offence has FV context"
+        meta:
+          business_definition: "TRUE if offence code contains 'FV' prefix"
+
+  - name: stg_alleged_offenders
+    description: >
+      Staged alleged offender data with demographic breakdowns.
+    meta:
+      layer: staging
+      grain: "One row per LGA per Year per Demographic Group"
+    columns:
+      - name: offender_record_id
+        description: "Surrogate key"
+      - name: year
+        description: "Fiscal year"
+      - name: local_government_area
+        description: "LGA name"
+      - name: alleged_offender_incidents
+        description: "Count of processing events"
+        meta:
+          business_definition: "Instances where a person was processed by police"
+          note: "Same person can be counted multiple times"
+
+  - name: stg_family_incidents
+    description: >
+      Staged family violence incidents data. Note: Only covers 2017-2021.
+    meta:
+      layer: staging
+      grain: "One row per LGA per Year"
+      time_range: "2017-2021 only"
+    columns:
+      - name: family_incident_id
+        description: "Surrogate key"
+      - name: year
+        description: "Fiscal year (2017-2021 only)"
+      - name: local_government_area
+        description: "LGA name"
+      - name: family_incidents
+        description: "Count of family violence incidents"
+        meta:
+          business_definition: "Incidents meeting family violence criteria under Victorian law"
+      - name: afm_female_count
+        description: "Female Affected Family Members"
+        meta:
+          business_definition: "Female victims in family violence incidents"
+      - name: afm_male_count
+        description: "Male Affected Family Members"
+        meta:
+          business_definition: "Male victims in family violence incidents"
+
+  - name: stg_victim_reports
+    description: >
+      Staged victim reports data with age group breakdowns.
+    meta:
+      layer: staging
+      grain: "One row per LGA per Year per Age Group"
+    columns:
+      - name: victim_report_id
+        description: "Surrogate key"
+      - name: year
+        description: "Fiscal year"
+      - name: local_government_area
+        description: "LGA name"
+      - name: age_group
+        description: "Age bracket of victim"
+        meta:
+          business_definition: "Standard age groups: 00-24, 25-34, 35-44, 45-54, 55+"
+      - name: victim_reports
+        description: "Count of victim reports"
+        meta:
+          business_definition: "Instances where a person was identified as a crime victim"
+
+  # --------------------------------------------------------------------------
+  # Intermediate Layer - Business logic and transformations
+  # --------------------------------------------------------------------------
+  - name: int_crime_metrics_by_lga
+    description: >
+      Consolidated crime metrics at the LGA level, joining all core datasets.
+    meta:
+      layer: intermediate
+      grain: "One row per LGA per Year"
+    columns:
+      - name: year
+        description: "Fiscal year"
+      - name: local_government_area
+        description: "LGA name"
+      - name: police_region
+        description: "Police region"
+      - name: total_incidents
+        description: "Sum of criminal incidents"
+      - name: total_offences
+        description: "Sum of recorded offences"
+      - name: total_alleged_offenders
+        description: "Sum of alleged offender incidents"
+      - name: total_victim_reports
+        description: "Sum of victim reports"
+      - name: offences_per_incident
+        description: "Ratio of offences to incidents"
+        meta:
+          calculation: "total_offences / total_incidents"
+      - name: clearance_rate
+        description: "Percentage of incidents resulting in charges"
+        meta:
+          calculation: "charges_count / total_incidents * 100"
+
+  - name: int_population_estimates
+    description: >
+      Population estimates derived from crime rate data.
+    meta:
+      layer: intermediate
+      grain: "One row per LGA per Year"
+      note: "Population derived from rate calculations, not official ABS data"
+    columns:
+      - name: year
+        description: "Fiscal year"
+      - name: local_government_area
+        description: "LGA name"
+      - name: estimated_population
+        description: "Derived population estimate"
+        meta:
+          calculation: "incidents_recorded / (rate_per_100k / 100000)"
+
+  # --------------------------------------------------------------------------
+  # Mart Layer - Analytical models for reporting
+  # --------------------------------------------------------------------------
+  - name: fct_crime_summary
+    description: >
+      Fact table containing comprehensive crime statistics by LGA and year.
+      This is the primary analytical model for crime analysis.
+    meta:
+      layer: marts
+      grain: "One row per LGA per Year"
+      primary_key: ["year", "local_government_area"]
+    columns:
+      - name: year
+        description: "Fiscal year (ending September)"
+        tests:
+          - not_null
+      - name: local_government_area
+        description: "Local Government Area"
+        tests:
+          - not_null
+      - name: police_region
+        description: "Police administrative region"
+      - name: population
+        description: "Estimated population"
+      - name: criminal_incidents
+        description: "Total criminal incidents"
+        meta:
+          metric_type: "count"
+          aggregation: "SUM"
+      - name: criminal_incident_rate
+        description: "Incidents per 100,000 population"
+        meta:
+          metric_type: "rate"
+          denominator: "population"
+      - name: recorded_offences
+        description: "Total recorded offences"
+        meta:
+          metric_type: "count"
+          aggregation: "SUM"
+      - name: recorded_offence_rate
+        description: "Offences per 100,000 population"
+        meta:
+          metric_type: "rate"
+      - name: alleged_offender_incidents
+        description: "Total alleged offender processing events"
+        meta:
+          metric_type: "count"
+      - name: victim_reports
+        description: "Total victim reports"
+        meta:
+          metric_type: "count"
+      - name: family_incidents
+        description: "Family violence incidents (2017+ only)"
+        meta:
+          metric_type: "count"
+          note: "NULL for years before 2017"
+      - name: offences_per_incident
+        description: "Average offences per incident"
+        meta:
+          metric_type: "ratio"
+      - name: year_over_year_change_pct
+        description: "Percentage change from previous year"
+        meta:
+          metric_type: "percentage"
+
+  - name: dim_local_government_area
+    description: >
+      Dimension table for Local Government Areas with geographic and
+      administrative attributes.
+    meta:
+      layer: marts
+      grain: "One row per LGA"
+    columns:
+      - name: lga_id
+        description: "Surrogate key for LGA"
+        tests:
+          - unique
+          - not_null
+      - name: local_government_area
+        description: "LGA name"
+        tests:
+          - unique
+      - name: police_region
+        description: "Police administrative region"
+      - name: police_region_code
+        description: "Numeric code for police region (1-4)"
+      - name: police_station_count
+        description: "Number of police stations in LGA"
+      - name: is_metropolitan
+        description: "Boolean flag for metro vs regional"
+        meta:
+          business_definition: "TRUE if in North West Metro or Southern Metro regions"
+
+  - name: dim_offence_type
+    description: >
+      Dimension table for offence classification hierarchy.
+    meta:
+      layer: marts
+      grain: "One row per Offence Subgroup"
+    columns:
+      - name: offence_type_id
+        description: "Surrogate key"
+      - name: offence_division_code
+        description: "Division code (A-F)"
+      - name: offence_division_name
+        description: "Division description"
+      - name: offence_subdivision_code
+        description: "Subdivision code"
+      - name: offence_subdivision_name
+        description: "Subdivision description"
+      - name: offence_subgroup_code
+        description: "Subgroup code"
+      - name: offence_subgroup_name
+        description: "Subgroup description"
+      - name: is_family_violence
+        description: "FV indicator"
+      - name: is_violent_crime
+        description: "Violent crime indicator"
+        meta:
+          business_definition: "TRUE for Division A offences"
+
+  - name: dim_date
+    description: >
+      Date dimension for time-based analysis.
+    meta:
+      layer: marts
+      grain: "One row per fiscal year"
+    columns:
+      - name: year
+        description: "Fiscal year"
+      - name: year_start_date
+        description: "First day of fiscal year (October 1)"
+      - name: year_end_date
+        description: "Last day of fiscal year (September 30)"
+      - name: has_family_incident_data
+        description: "Boolean flag indicating if family incident data available"
+        meta:
+          business_definition: "TRUE for years 2017-2021"
+
+# ============================================================================
+# METRIC DEFINITIONS
+# ============================================================================
+metrics:
+  - name: total_criminal_incidents
+    label: "Total Criminal Incidents"
+    description: "Sum of all criminal incidents"
+    model: ref('fct_crime_summary')
+    type: sum
+    sql: criminal_incidents
+    timestamp: year
+    dimensions:
+      - local_government_area
+      - police_region
+
+  - name: crime_rate
+    label: "Crime Rate (per 100K)"
+    description: "Criminal incidents per 100,000 population"
+    model: ref('fct_crime_summary')
+    type: derived
+    sql: "SUM(criminal_incidents) * 100000.0 / SUM(population)"
+    timestamp: year
+    dimensions:
+      - local_government_area
+      - police_region
+
+  - name: clearance_rate
+    label: "Clearance Rate (%)"
+    description: "Percentage of incidents resulting in charges"
+    model: ref('fct_crime_summary')
+    type: derived
+    sql: "SUM(incidents_with_charges) * 100.0 / SUM(criminal_incidents)"
+    timestamp: year
+
+  - name: yoy_change
+    label: "Year-over-Year Change (%)"
+    description: "Percentage change in incidents from previous year"
+    model: ref('fct_crime_summary')
+    type: derived
+    sql: >
+      (SUM(criminal_incidents) - LAG(SUM(criminal_incidents)) OVER (ORDER BY year))
+      * 100.0 / LAG(SUM(criminal_incidents)) OVER (ORDER BY year)
+    timestamp: year
+
+# ============================================================================
+# EXPOSURES (Downstream dependencies)
+# ============================================================================
+exposures:
+  - name: crime_analysis_dashboard
+    label: "Victorian Crime Analysis Dashboard"
+    type: dashboard
+    description: >
+      Interactive dashboard showing crime trends, regional comparisons,
+      and demographic breakdowns across Victorian LGAs.
+    depends_on:
+      - ref('fct_crime_summary')
+      - ref('dim_local_government_area')
+      - ref('dim_offence_type')
+    owner:
+      name: "Analytics Team"
+      email: "analytics@example.com"
+
+  - name: annual_crime_report
+    label: "Annual Crime Statistics Report"
+    type: analysis
+    description: >
+      Annual report on Victorian crime statistics with year-over-year
+      comparisons and regional analysis.
+    depends_on:
+      - ref('fct_crime_summary')
+    owner:
+      name: "Reporting Team"

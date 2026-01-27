@@ -1,0 +1,80 @@
+# Victorian Crime Data - dbt Project Configuration
+# This project provides a semantic layer for Victorian crime statistics
+
+name: 'vic_crime_data'
+version: '1.0.0'
+config-version: 2
+
+# Project metadata
+profile: 'vic_crime_data'
+
+# Directory structure
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Clean targets
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Seed configuration
+seeds:
+  vic_crime_data:
+    +schema: reference
+    +quote_columns: true
+
+# Model configuration
+models:
+  vic_crime_data:
+    # Staging models - clean and standardize raw data
+    staging:
+      +schema: staging
+      +materialized: view
+      +tags: ['staging']
+
+    # Intermediate models - business logic transformations
+    intermediate:
+      +schema: intermediate
+      +materialized: ephemeral
+      +tags: ['intermediate']
+
+    # Mart models - final analytical models
+    marts:
+      +schema: marts
+      +materialized: table
+      +tags: ['marts']
+
+      core:
+        +tags: ['core']
+
+      crime_analysis:
+        +tags: ['crime_analysis']
+
+      geographic:
+        +tags: ['geographic']
+
+# Variable definitions for the project
+vars:
+  # Date range for analysis
+  start_year: 2012
+  end_year: 2021
+
+  # Family incidents only available from 2017
+  family_incidents_start_year: 2017
+
+  # Reference values
+  rate_denominator: 100000
+
+  # Standard exclusions
+  excluded_lgas:
+    - 'Total'
+    - 'Justice Institutions and Immigration Facilities'
+    - 'Unincorporated Vic'
+
+# Documentation
+docs-paths: ["docs"]
+asset-paths: ["assets"]
