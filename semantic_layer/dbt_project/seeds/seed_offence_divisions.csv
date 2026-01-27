@@ -1,0 +1,7 @@
+offence_division_code,offence_division_name,description,is_violent_crime
+A,Crimes against the person,Violence and assault offences,TRUE
+B,Property and deception offences,Theft burglary and fraud,FALSE
+C,Drug offences,Drug use possession and trafficking,FALSE
+D,Public order and security offences,Weapons and disorderly conduct,FALSE
+E,Justice procedures offences,Breach of orders and obstruction,FALSE
+F,Other offences,Transport regulatory and miscellaneous,FALSE
