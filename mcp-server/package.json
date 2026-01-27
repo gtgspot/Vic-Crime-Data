@@ -1,0 +1,30 @@
+{
+  "name": "vic-crime-data-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Victorian Crime Data providing access to crime statistics, geographic data, and trends",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "crime-data",
+    "victoria",
+    "statistics"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "csv-parse": "^5.5.0",
+    "xlsx": "^0.18.5",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
