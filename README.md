@@ -44,7 +44,24 @@ The presentation pack to showcase the findings and data visualisation can be acc
 
 ## Data sources:
 
+### Primary Datasets (2012-2021)
 - Input crimes data were downloaded from the goverment website [Crime Statistics](https://www.crimestatistics.vic.gov.au/crime-statistics/latest-victorian-crime-data/download-data)
+
+### Historical Dataset (2010-2019)
+The project also includes support for the **VIC CSA - Crime Statistics - Criminal Incidents by Principal Offence (LGA) 2010-2019** dataset:
+
+- **Time Period:** Years ending March 2010-2019
+- **Geographic Boundaries:** ASGS 2011 LGA boundaries
+- **Focus:** Criminal incidents by principal offence classification
+
+**Download Sources:**
+- [AURIN Data Catalogue](https://data.aurin.org.au/dataset/vic-govt-csa-csa-crime-stats-criminal-incidents-princ-offence-lga-2010-2019-lga2011) (requires institutional login)
+- [data.gov.au](https://data.gov.au/dataset/ds-aurin-55c99905-75fe-49b8-a663-85b6f24b827d)
+- [Crime Statistics Agency Victoria](https://www.crimestatistics.vic.gov.au/download-data-11)
+
+**Note:** The 2010-2019 dataset uses March year-ending (vs September for the primary 2012-2021 data) and different LGA boundaries. See the [data dictionary](semantic_layer/data_dictionary.md) for details on merging these datasets.
+
+### Other Data Sources
 
 - Latitude of police stations from [government data source](https://data.gov.au/dataset/ds-aurin-aurin%3Adatasource-VIC_Govt_DELWP-VIC_Govt_DELWP_datavic_VMFEAT_POLICE_STATION/distribution/dist-aurin-aurin%3Adatasource-VIC_Govt_DELWP-VIC_Govt_DELWP_datavic_VMFEAT_POLICE_STATION-0/details?q=), converted this to [geojson file](/../main/Data/VMFEAT_POLICE_STATION.json) and [csv file](/../main/Data/VMFEAT_POLICE_STATION.csv)  using [mapshaper](https://mapshaper.org/)
 
@@ -52,6 +69,30 @@ The presentation pack to showcase the findings and data visualisation can be acc
 
 - LGA boundaries Json file had been saved this file in [here](/../main//Data/LGA_boundaries.json)
 
+## Data Ingestion Tools
+
+The project includes data processing utilities for loading and merging crime statistics:
+
+```python
+# Load and process crime data
+from Scripts.data_ingestion import CrimeDataProcessor
+
+processor = CrimeDataProcessor()
+
+# Load 2012-2021 data
+df_2012 = processor.load_criminal_incidents_2012_2021()
+
+# Load 2010-2019 data (if available)
+df_2010 = processor.load_criminal_incidents_2010_2019()
+
+# Merge for extended time series
+df_merged = processor.merge_time_series(prefer_september=True)
+```
+
+For download instructions:
+```bash
+python Scripts/data_ingestion/download_2010_2019_data.py --download
+```
 
 ## Installation of dependencies - geopandas:
 

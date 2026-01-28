@@ -40,15 +40,18 @@ semantic_layer/
 
 ## Key Concepts
 
-### The Five Core Datasets
+### The Six Core Datasets
 
-| Dataset | What It Measures | Time Range |
-|---------|-----------------|------------|
-| Criminal Incidents | Unique crime events | 2012-2021 |
-| Recorded Offences | Individual criminal acts | 2012-2021 |
-| Alleged Offenders | Persons processed by police | 2012-2021 |
-| Family Incidents | Family violence events | **2017-2021** |
-| Victim Reports | Persons victimized | 2012-2021 |
+| Dataset | What It Measures | Time Range | Year Ending |
+|---------|-----------------|------------|-------------|
+| Criminal Incidents (2012-2021) | Unique crime events | 2012-2021 | September |
+| Criminal Incidents by Principal Offence (2010-2019) | Incidents by offence type | **2010-2019** | March |
+| Recorded Offences | Individual criminal acts | 2012-2021 | September |
+| Alleged Offenders | Persons processed by police | 2012-2021 | September |
+| Family Incidents | Family violence events | **2017-2021** | September |
+| Victim Reports | Persons victimized | 2012-2021 | September |
+
+**Note:** The 2010-2019 dataset uses March year-ending and ASGS 2011 LGA boundaries, while the 2012-2021 datasets use September year-ending and current LGA boundaries.
 
 ### Important Relationships
 

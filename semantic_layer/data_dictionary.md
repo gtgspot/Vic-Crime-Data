@@ -6,18 +6,21 @@ This document provides comprehensive definitions for all columns across the five
 
 ## Table of Contents
 
-1. [Criminal Incidents Dataset](#1-criminal-incidents-dataset)
-2. [Recorded Offences Dataset](#2-recorded-offences-dataset)
-3. [Alleged Offenders Dataset](#3-alleged-offenders-dataset)
-4. [Family Incidents Dataset](#4-family-incidents-dataset)
-5. [Victim Reports Dataset](#5-victim-reports-dataset)
-6. [Supporting Datasets](#6-supporting-datasets)
+1. [Criminal Incidents Dataset (2012-2021)](#1-criminal-incidents-dataset-2012-2021)
+2. [Criminal Incidents by Principal Offence (2010-2019)](#2-criminal-incidents-by-principal-offence-2010-2019)
+3. [Recorded Offences Dataset](#3-recorded-offences-dataset)
+4. [Alleged Offenders Dataset](#4-alleged-offenders-dataset)
+5. [Family Incidents Dataset](#5-family-incidents-dataset)
+6. [Victim Reports Dataset](#6-victim-reports-dataset)
+7. [Supporting Datasets](#7-supporting-datasets)
 
 ---
 
-## 1. Criminal Incidents Dataset
+## 1. Criminal Incidents Dataset (2012-2021)
 
 **Source File:** `Data/LGA_Criminal_Incidents_Year_Ending_September_2021.xlsx`
+
+**Time Period:** Years ending September 2012-2021 (10 years)
 
 **Description:** Contains records of criminal incidents reported to Victoria Police, aggregated by Local Government Area (LGA). A criminal incident is a unique event that may involve one or more offences.
 
@@ -75,7 +78,93 @@ This document provides comprehensive definitions for all columns across the five
 
 ---
 
-## 2. Recorded Offences Dataset
+## 2. Criminal Incidents by Principal Offence (2010-2019)
+
+**Source File:** `Data/LGA_Criminal_Incidents_Principal_Offence_2010_2019.xlsx`
+
+**Time Period:** Years ending March 2010-2019 (10 years)
+
+**Geographic Standard:** ASGS 2011 Local Government Area boundaries
+
+**Data Source:** Crime Statistics Agency Victoria via data.gov.au / AURIN
+
+**Download URLs:**
+- AURIN: https://data.aurin.org.au/dataset/vic-govt-csa-csa-crime-stats-criminal-incidents-princ-offence-lga-2010-2019-lga2011
+- data.gov.au: https://data.gov.au/dataset/ds-aurin-55c99905-75fe-49b8-a663-85b6f24b827d
+- CSA Victoria: https://www.crimestatistics.vic.gov.au/download-data-11
+
+**Description:** Contains criminal incidents aggregated by principal offence and Local Government Area for the period 2010-2019. This dataset uses March year-ending (unlike the 2012-2021 dataset which uses September) and ASGS 2011 LGA boundaries. Data is sourced from the Victoria Police LEAP database.
+
+### Key Differences from 2012-2021 Dataset
+
+| Aspect | 2010-2019 Dataset | 2012-2021 Dataset |
+|--------|-------------------|-------------------|
+| Year Ending | March | September |
+| LGA Boundaries | ASGS 2011 | Current (2021) |
+| Time Range | 2010-2019 | 2012-2021 |
+| Overlapping Years | 2012-2019 | 2012-2019 |
+| Focus | Principal Offence | Multiple dimensions |
+
+### Expected Columns
+
+| Column Name | Data Type | Business Definition | Example Values |
+|-------------|-----------|---------------------|----------------|
+| `lga_code` | String | ASGS 2011 LGA code | "21110", "21180" |
+| `lga_name` | String | Local Government Area name | "Melbourne", "Casey", "Ballarat" |
+| `year` | Integer | Year (March year-ending) | 2010, 2015, 2019 |
+| `year_ending` | String | Month of year ending | "March" |
+| `offence_division` | String | Principal offence division (A-F) | "A Crimes against the person", "B Property and deception offences" |
+| `offence_subdivision` | String | Principal offence subdivision | "A10 Homicide and related offences" |
+| `offence_subgroup` | String | Principal offence subgroup | "A10 Homicide and related offences" |
+| `incidents_recorded` | Integer | Number of criminal incidents | 150, 5000, 25000 |
+| `rate_per_100000` | Float | Rate per 100,000 population | 45.5, 1500.3 |
+
+### Offence Division Classifications
+
+| Code | Division Name | Description |
+|------|--------------|-------------|
+| A | Crimes against the person | Homicide, assault, sexual offences, robbery, etc. |
+| B | Property and deception offences | Burglary, theft, fraud, property damage |
+| C | Drug offences | Drug use, possession, trafficking |
+| D | Public order and security offences | Weapons, disorderly conduct |
+| E | Justice procedures offences | Breach of orders, escape custody |
+| F | Other offences | Regulatory offences, miscellaneous |
+
+### Data Quality Notes
+
+1. **Exclusions:** Data excludes:
+   - Justice institutions and immigration facilities
+   - Unincorporated Victoria
+   - Incidents where geographic location is unknown or outside Victoria
+
+2. **Recording Date:** Statistics are based on data extracted on the 18th day after the reference period
+
+3. **Data Movement:** Recorded crime statistics are subject to movement between releases
+
+4. **Coverage:** Not representative of all crime in Victoria - some crimes may not be reported or recorded
+
+5. **Merging with 2012-2021 Data:** When merging datasets, be aware of:
+   - Different year-ending months (March vs September)
+   - Potential LGA boundary changes between ASGS versions
+   - Overlapping years (2012-2019) may have different counts due to year-end timing
+
+### Usage with Data Processor
+
+```python
+from Scripts.data_ingestion import CrimeDataProcessor
+
+processor = CrimeDataProcessor()
+
+# Load 2010-2019 data
+df_2010 = processor.load_criminal_incidents_2010_2019()
+
+# Merge with 2012-2021 data for extended time series
+df_merged = processor.merge_time_series(prefer_september=True)
+```
+
+---
+
+## 3. Recorded Offences Dataset
 
 **Source File:** `Data/LGA_Recorded_Offences_Year_Ending_September_2021.xlsx`
 
@@ -106,7 +195,7 @@ This document provides comprehensive definitions for all columns across the five
 
 ---
 
-## 3. Alleged Offenders Dataset
+## 4. Alleged Offenders Dataset
 
 **Source File:** `Data/LGA_Alleged_Offenders_Year_Ending_September_2021.xlsx`
 
@@ -135,7 +224,7 @@ This document provides comprehensive definitions for all columns across the five
 
 ---
 
-## 4. Family Incidents Dataset
+## 5. Family Incidents Dataset
 
 **Source File:** `Data/LGA_Family_Incidents_Year_Ending_September_2021.xlsx`
 
@@ -175,7 +264,7 @@ This document provides comprehensive definitions for all columns across the five
 
 ---
 
-## 5. Victim Reports Dataset
+## 6. Victim Reports Dataset
 
 **Source File:** `Data/LGA_Victim_Reports_Year_Ending_September_2021.xlsx`
 
@@ -213,7 +302,7 @@ This document provides comprehensive definitions for all columns across the five
 
 ---
 
-## 6. Supporting Datasets
+## 7. Supporting Datasets
 
 ### 6.1 Police Station Locations
 

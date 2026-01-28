@@ -80,6 +80,52 @@ sources:
           update_frequency: "Annual (September year-end)"
           time_range: "2012-2021"
 
+  - name: raw_crime_data_2010_2019
+    description: "Historical crime statistics data from 2010-2019 using March year-end and ASGS 2011 LGA boundaries"
+    database: vic_crime_db
+    schema: raw
+    tables:
+      - name: criminal_incidents_principal_offence
+        description: >
+          Criminal incidents by principal offence for 2010-2019. This dataset uses
+          March year-ending (unlike the 2012-2021 dataset which uses September) and
+          ASGS 2011 LGA boundaries. Data is sourced from the Victoria Police LEAP database.
+        meta:
+          owner: "Crime Statistics Agency"
+          update_frequency: "Annual (March year-end)"
+          time_range: "2010-2019"
+          asgs_version: "2011"
+          row_count_approx: 50000
+          download_urls:
+            aurin: "https://data.aurin.org.au/dataset/vic-govt-csa-csa-crime-stats-criminal-incidents-princ-offence-lga-2010-2019-lga2011"
+            data_gov_au: "https://data.gov.au/dataset/ds-aurin-55c99905-75fe-49b8-a663-85b6f24b827d"
+            csa: "https://www.crimestatistics.vic.gov.au/download-data-11"
+        columns:
+          - name: year
+            description: "Fiscal year ending March"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+          - name: lga_code
+            description: "ASGS 2011 LGA code"
+          - name: lga_name
+            description: "Local Government Area name"
+            tests:
+              - not_null
+          - name: offence_division
+            description: "Principal offence division (A-F)"
+          - name: offence_subdivision
+            description: "Principal offence subdivision"
+          - name: offence_subgroup
+            description: "Principal offence subgroup"
+          - name: incidents_recorded
+            description: "Count of criminal incidents"
+            tests:
+              - not_null
+          - name: rate_per_100000
+            description: "Rate per 100,000 population"
+
   - name: reference_data
     description: "Reference and geographic data for Victoria"
     schema: reference
@@ -235,6 +281,70 @@ models:
         description: "Count of victim reports"
         meta:
           business_definition: "Instances where a person was identified as a crime victim"
+
+  - name: stg_criminal_incidents_2010_2019
+    description: >
+      Staged criminal incidents by principal offence data for 2010-2019. Uses
+      March year-ending and ASGS 2011 LGA boundaries. This dataset focuses on
+      principal offence classification and can be merged with the 2012-2021 data
+      for extended time series analysis.
+    meta:
+      layer: staging
+      grain: "One row per LGA per Year per Principal Offence"
+      time_range: "2010-2019"
+      year_ending: "March"
+      asgs_version: "2011"
+    columns:
+      - name: incident_id
+        description: "Surrogate key for the incident record"
+        tests:
+          - unique
+          - not_null
+      - name: year
+        description: "Fiscal year (ending March)"
+        meta:
+          business_definition: "The 12-month reporting period ending in March"
+      - name: year_ending_month
+        description: "Month of year ending (always 'March' for this dataset)"
+      - name: lga_code
+        description: "ASGS 2011 LGA code"
+      - name: local_government_area
+        description: "Local Government Area name"
+        meta:
+          business_definition: "One of 79 geographic administrative divisions in Victoria (ASGS 2011)"
+      - name: offence_division
+        description: "Principal offence division (A-F)"
+        meta:
+          business_definition: "Primary classification of the principal offence"
+          values:
+            A: "Crimes against the person"
+            B: "Property and deception offences"
+            C: "Drug offences"
+            D: "Public order and security offences"
+            E: "Justice procedures offences"
+            F: "Other offences"
+      - name: offence_subdivision
+        description: "Principal offence subdivision"
+        meta:
+          business_definition: "Mid-level classification of the principal offence"
+      - name: offence_subgroup
+        description: "Principal offence subgroup"
+        meta:
+          business_definition: "Most granular classification of the principal offence"
+      - name: incidents_recorded
+        description: "Count of criminal incidents"
+        meta:
+          business_definition: "Unique criminal events reported to police"
+          aggregation: "SUM"
+      - name: rate_per_100k
+        description: "Incidents per 100,000 population"
+        meta:
+          business_definition: "Standardized rate enabling comparison across different-sized areas"
+          calculation: "(incidents_recorded / population) * 100000"
+      - name: data_source
+        description: "Identifier for data source"
+        meta:
+          value: "CSA_2010_2019"
 
   # --------------------------------------------------------------------------
   # Intermediate Layer - Business logic and transformations
